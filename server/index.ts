@@ -1,6 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
+import { db } from "./db";
+import { users } from "@shared/schema";
 
 const app = express();
 app.use(express.json());
@@ -36,7 +39,36 @@ app.use((req, res, next) => {
   next();
 });
 
+// Function to initialize database with default admin user
+async function initializeDatabase() {
+  try {
+    // Check if admin user exists
+    const adminUser = await storage.getUserByUsername('admin');
+    
+    if (!adminUser) {
+      // Create default admin user
+      await storage.createUser({
+        username: 'admin',
+        password: '$2b$10$UJHG5HIeVJnkElB1t7PuE.NQdHJxTe6YTjX.XHHCIfkudVNb8DkB.', // 'admin123'
+        email: 'admin@example.com',
+        balance: 10000,
+        isAdmin: true
+      });
+      console.log('Default admin user created');
+    }
+    
+    // Initialize game settings (the storage.getGameSettings method creates default settings if none exist)
+    const settings = await storage.getGameSettings();
+    console.log('Game settings loaded:', settings);
+  } catch (error) {
+    console.error('Error initializing database:', error);
+  }
+}
+
 (async () => {
+  // Initialize database before registering routes
+  await initializeDatabase();
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
