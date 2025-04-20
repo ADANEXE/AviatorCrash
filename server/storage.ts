@@ -7,7 +7,7 @@ import {
   type UserWithoutPassword, type LiveBet, type GameHistory
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, asc, sql, isNull } from "drizzle-orm";
+import { eq, desc, and, asc, sql, isNull, gte } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -18,30 +18,37 @@ export interface IStorage {
   updateUserBalance(userId: number, amount: number): Promise<User>;
   getUsersCount(): Promise<number>;
   getUsers(limit: number, offset: number): Promise<UserWithoutPassword[]>;
-  
+
   // Game rounds methods
   createGameRound(gameRound: InsertGameRound): Promise<GameRound>;
   getGameRound(id: number): Promise<GameRound | undefined>;
   endGameRound(id: number, crashPoint: number): Promise<GameRound>;
   getGameHistory(limit: number): Promise<GameHistory[]>;
-  
+
   // Bets methods
   createBet(bet: InsertBet): Promise<Bet>;
   getBet(id: number): Promise<Bet | undefined>;
   getUserBets(userId: number, limit: number): Promise<Bet[]>;
   getLiveBets(gameRoundId: number): Promise<LiveBet[]>;
   updateBetStatus(id: number, status: string, cashedOutAt?: number, profit?: number): Promise<Bet>;
-  
+
   // Transactions methods
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   getUserTransactions(userId: number, limit: number): Promise<Transaction[]>;
   getPendingWithdrawals(): Promise<Transaction[]>;
   getPendingDeposits(): Promise<any[]>;
   updateTransactionStatus(id: number, status: string): Promise<Transaction>;
-  
+
   // Game settings methods
   getGameSettings(): Promise<GameSettings>;
   updateGameSettings(settings: Partial<InsertGameSettings>): Promise<GameSettings>;
+
+  // Analytics methods
+  getTotalBets: () => Promise<number>;
+  getTodayBets: () => Promise<number>;
+  getTotalDeposits: () => Promise<number>;
+  getTotalWithdrawals: () => Promise<number>;
+  getDailyActiveUsers: () => Promise<{ hour: string; users: number }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -57,7 +64,7 @@ export class DatabaseStorage implements IStorage {
     );
     return user;
   }
-  
+
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(
       sql`LOWER(${users.email}) = LOWER(${email})`
@@ -69,28 +76,28 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
-  
+
   async updateUserBalance(userId: number, amount: number): Promise<User> {
     const user = await this.getUser(userId);
     if (!user) {
       throw new Error('User not found');
     }
-    
+
     const newBalance = user.balance + amount;
     const [updatedUser] = await db
       .update(users)
       .set({ balance: newBalance })
       .where(eq(users.id, userId))
       .returning();
-    
+
     return updatedUser;
   }
-  
+
   async getUsersCount(): Promise<number> {
     const result = await db.select({ count: sql<number>`COUNT(*)` }).from(users);
     return result[0].count;
   }
-  
+
   async getUsers(limit: number, offset: number): Promise<UserWithoutPassword[]> {
     const selectedUsers = await db
       .select({
@@ -105,7 +112,7 @@ export class DatabaseStorage implements IStorage {
       .limit(limit)
       .offset(offset)
       .orderBy(users.id);
-    
+
     return selectedUsers;
   }
 
@@ -117,7 +124,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return gameRound;
   }
-  
+
   async getGameRound(id: number): Promise<GameRound | undefined> {
     const [gameRound] = await db
       .select()
@@ -125,7 +132,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(gameRounds.id, id));
     return gameRound;
   }
-  
+
   async endGameRound(id: number, crashPoint: number): Promise<GameRound> {
     const [updatedGameRound] = await db
       .update(gameRounds)
@@ -136,14 +143,14 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(gameRounds.id, id))
       .returning();
-    
+
     if (!updatedGameRound) {
       throw new Error('Game round not found');
     }
-    
+
     return updatedGameRound;
   }
-  
+
   async getGameHistory(limit: number): Promise<GameHistory[]> {
     const history = await db
       .select({
@@ -154,7 +161,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(gameRounds.isComplete, true))
       .orderBy(desc(gameRounds.endedAt))
       .limit(limit);
-    
+
     return history;
   }
 
@@ -166,7 +173,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return bet;
   }
-  
+
   async getBet(id: number): Promise<Bet | undefined> {
     const [bet] = await db
       .select()
@@ -174,7 +181,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bets.id, id));
     return bet;
   }
-  
+
   async getUserBets(userId: number, limit: number): Promise<Bet[]> {
     const userBets = await db
       .select()
@@ -182,10 +189,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bets.userId, userId))
       .orderBy(desc(bets.createdAt))
       .limit(limit);
-    
+
     return userBets;
   }
-  
+
   async getLiveBets(gameRoundId: number): Promise<LiveBet[]> {
     // Join bets and users to get the data for live bets
     const betResults = await db
@@ -199,10 +206,10 @@ export class DatabaseStorage implements IStorage {
       .from(bets)
       .innerJoin(users, eq(bets.userId, users.id))
       .where(eq(bets.gameRoundId, gameRoundId));
-    
+
     const liveBets: LiveBet[] = betResults.map(bet => {
       const initials = bet.username.substring(0, 2).toUpperCase();
-      
+
       let status: 'active' | 'cashed_out' | 'lost';
       if (bet.status === 'won') {
         status = 'cashed_out';
@@ -211,7 +218,7 @@ export class DatabaseStorage implements IStorage {
       } else {
         status = 'active';
       }
-      
+
       return {
         id: bet.id,
         username: bet.username,
@@ -221,25 +228,25 @@ export class DatabaseStorage implements IStorage {
         cashedOutAt: bet.cashedOutAt || undefined
       };
     });
-    
+
     return liveBets;
   }
-  
+
   async updateBetStatus(id: number, status: string, cashedOutAt?: number, profit?: number): Promise<Bet> {
     const updateValues: Partial<Bet> = { status };
     if (cashedOutAt !== undefined) updateValues.cashedOutAt = cashedOutAt;
     if (profit !== undefined) updateValues.profit = profit;
-    
+
     const [updatedBet] = await db
       .update(bets)
       .set(updateValues)
       .where(eq(bets.id, id))
       .returning();
-    
+
     if (!updatedBet) {
       throw new Error('Bet not found');
     }
-    
+
     return updatedBet;
   }
 
@@ -251,7 +258,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return transaction;
   }
-  
+
   async getUserTransactions(userId: number, limit: number): Promise<Transaction[]> {
     const userTransactions = await db
       .select()
@@ -259,10 +266,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(transactions.userId, userId))
       .orderBy(desc(transactions.createdAt))
       .limit(limit);
-    
+
     return userTransactions;
   }
-  
+
   async getPendingWithdrawals(): Promise<Transaction[]> {
     const pendingWithdrawals = await db
       .select()
@@ -274,10 +281,10 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(asc(transactions.createdAt));
-    
+
     return pendingWithdrawals;
   }
-  
+
   async getPendingDeposits(): Promise<any[]> {
     // Find all pending deposit transactions and join with user data
     const result = await db
@@ -302,10 +309,10 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(asc(transactions.createdAt));
-    
+
     return result;
   }
-  
+
   async updateTransactionStatus(id: number, status: string): Promise<Transaction> {
     const [updatedTransaction] = await db
       .update(transactions)
@@ -315,11 +322,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(transactions.id, id))
       .returning();
-    
+
     if (!updatedTransaction) {
       throw new Error('Transaction not found');
     }
-    
+
     return updatedTransaction;
   }
 
@@ -330,7 +337,7 @@ export class DatabaseStorage implements IStorage {
       .from(gameSettings)
       .orderBy(gameSettings.id)
       .limit(1);
-    
+
     if (!settings) {
       // Create default settings if none exist
       const defaultSettings = {
@@ -339,21 +346,21 @@ export class DatabaseStorage implements IStorage {
         houseEdge: 5,
         maxMultiplier: 100,
       };
-      
+
       const [newSettings] = await db
         .insert(gameSettings)
         .values(defaultSettings)
         .returning();
-      
+
       return newSettings;
     }
-    
+
     return settings;
   }
-  
+
   async updateGameSettings(settings: Partial<InsertGameSettings>): Promise<GameSettings> {
     const existingSettings = await this.getGameSettings();
-    
+
     const [updatedSettings] = await db
       .update(gameSettings)
       .set({
@@ -362,8 +369,58 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(gameSettings.id, existingSettings.id))
       .returning();
-    
+
     return updatedSettings;
+  }
+
+  // Analytics methods
+  async getTotalBets(): Promise<number> {
+    const result = await db.select({ count: sql`count(*)` })
+      .from(transactions)
+      .where(eq(transactions.type, 'bet'));
+    return Number(result[0].count);
+  }
+
+  async getTodayBets(): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const result = await db.select({ count: sql`count(*)` })
+      .from(transactions)
+      .where(and(
+        eq(transactions.type, 'bet'),
+        gte(transactions.createdAt, today)
+      ));
+    return Number(result[0].count);
+  }
+
+  async getTotalDeposits(): Promise<number> {
+    const result = await db.select({ sum: sql`sum(amount)` })
+      .from(transactions)
+      .where(and(
+        eq(transactions.type, 'deposit'),
+        eq(transactions.status, 'completed')
+      ));
+    return Number(result[0].sum) || 0;
+  }
+
+  async getTotalWithdrawals(): Promise<number> {
+    const result = await db.select({ sum: sql`sum(amount)` })
+      .from(transactions)
+      .where(and(
+        eq(transactions.type, 'withdrawal'),
+        eq(transactions.status, 'completed')
+      ));
+    return Number(result[0].sum) || 0;
+  }
+
+  async getDailyActiveUsers(): Promise<{ hour: string; users: number }[]> {
+    const hours = [];
+    for (let i = 0; i < 24; i++) {
+      const hour = i.toString().padStart(2, '0') + ':00';
+      const users = Math.floor(Math.random() * 20) + 5; // Placeholder data
+      hours.push({ hour, users });
+    }
+    return hours;
   }
 }
 

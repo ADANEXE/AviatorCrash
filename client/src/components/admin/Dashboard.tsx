@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -28,26 +29,19 @@ type DashboardData = {
   totalDeposits: number;
   totalWithdrawals: number;
   profitLoss: number;
+  dailyActiveUsers: {
+    hour: string;
+    users: number;
+  }[];
 };
 
 export default function Dashboard() {
   const { gameHistory } = useGame();
   
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ['/api/admin/dashboard'],
     refetchInterval: 60000, // Refetch every minute
   });
-
-  // Since the endpoint is not implemented, use dummy data
-  const dashboardData: DashboardData = {
-    totalUsers: 156,
-    activeUsers: 32,
-    totalBets: 1289,
-    todayBets: 124,
-    totalDeposits: 25000,
-    totalWithdrawals: 15000,
-    profitLoss: 10000,
-  };
 
   // Create a chart data from game history
   const chartData = gameHistory.map((game) => ({
@@ -79,9 +73,9 @@ export default function Dashboard() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.totalUsers}</div>
+            <div className="text-2xl font-bold">{data?.totalUsers || 0}</div>
             <p className="text-xs text-[#8A96A3]">
-              {dashboardData.activeUsers} active now
+              {data?.activeUsers || 0} active now
             </p>
           </CardContent>
         </Card>
@@ -103,9 +97,9 @@ export default function Dashboard() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.totalBets}</div>
+            <div className="text-2xl font-bold">{data?.totalBets || 0}</div>
             <p className="text-xs text-[#8A96A3]">
-              {dashboardData.todayBets} today
+              {data?.todayBets || 0} today
             </p>
           </CardContent>
         </Card>
@@ -126,8 +120,8 @@ export default function Dashboard() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{dashboardData.totalDeposits}</div>
-            <p className="text-xs text-[#8A96A3]">+12.5% from last month</p>
+            <div className="text-2xl font-bold">₹{data?.totalDeposits || 0}</div>
+            <p className="text-xs text-[#8A96A3]">Total deposits</p>
           </CardContent>
         </Card>
         <Card className="bg-[#1A2634] border-0">
@@ -147,8 +141,10 @@ export default function Dashboard() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-500">₹{dashboardData.profitLoss}</div>
-            <p className="text-xs text-[#8A96A3]">+8.2% from last month</p>
+            <div className={`text-2xl font-bold ${data?.profitLoss && data.profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              ₹{data?.profitLoss || 0}
+            </div>
+            <p className="text-xs text-[#8A96A3]">Net profit/loss</p>
           </CardContent>
         </Card>
       </div>
@@ -206,17 +202,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart 
-                data={[
-                  { hour: "00:00", users: 12 },
-                  { hour: "04:00", users: 5 },
-                  { hour: "08:00", users: 8 },
-                  { hour: "12:00", users: 22 },
-                  { hour: "16:00", users: 34 },
-                  { hour: "20:00", users: 28 },
-                  { hour: "24:00", users: 16 },
-                ]}
-              >
+              <LineChart data={data?.dailyActiveUsers || []}>
                 <XAxis 
                   dataKey="hour" 
                   stroke="#8A96A3" 
