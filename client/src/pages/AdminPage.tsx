@@ -6,6 +6,7 @@ import Dashboard from "@/components/admin/Dashboard";
 import GameSettings from "@/components/admin/GameSettings";
 import UserManagement from "@/components/admin/UserManagement";
 import WithdrawalRequests from "@/components/admin/WithdrawalRequests";
+import DepositRequests from "@/components/admin/DepositRequests";
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -25,7 +26,7 @@ export default function AdminPage() {
       <div className="border-b border-[#8A96A3]/10 pb-4">
         <h1 className="text-4xl font-bold tracking-tight">Admin Panel</h1>
         <p className="text-[#8A96A3] mt-2">
-          Manage game settings, users, and withdrawal requests.
+          Manage game settings, users, deposits, and withdrawal requests.
         </p>
       </div>
       
@@ -39,6 +40,9 @@ export default function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="users" className="data-[state=active]:bg-[#1A2634]">
             Users
+          </TabsTrigger>
+          <TabsTrigger value="deposits" className="data-[state=active]:bg-[#1A2634]">
+            Deposits
           </TabsTrigger>
           <TabsTrigger value="withdrawals" className="data-[state=active]:bg-[#1A2634]">
             Withdrawals
@@ -55,6 +59,10 @@ export default function AdminPage() {
         
         <TabsContent value="users">
           <UserManagement />
+        </TabsContent>
+        
+        <TabsContent value="deposits">
+          <DepositRequests />
         </TabsContent>
         
         <TabsContent value="withdrawals">

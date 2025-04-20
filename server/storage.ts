@@ -277,6 +277,33 @@ export class DatabaseStorage implements IStorage {
     return pendingWithdrawals;
   }
   
+  async getPendingDeposits(): Promise<Transaction[]> {
+    // Find all pending deposit transactions and join with user data
+    const result = await db
+      .select({
+        id: transactions.id,
+        userId: transactions.userId,
+        username: users.username,
+        amount: transactions.amount,
+        status: transactions.status,
+        paymentMethod: transactions.paymentMethod,
+        transactionDetails: transactions.transactionDetails,
+        createdAt: transactions.createdAt,
+        updatedAt: transactions.updatedAt
+      })
+      .from(transactions)
+      .innerJoin(users, eq(transactions.userId, users.id))
+      .where(
+        and(
+          eq(transactions.type, 'deposit'),
+          eq(transactions.status, 'pending')
+        )
+      )
+      .orderBy(asc(transactions.createdAt));
+    
+    return result;
+  }
+  
   async updateTransactionStatus(id: number, status: string): Promise<Transaction> {
     const [updatedTransaction] = await db
       .update(transactions)

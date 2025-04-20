@@ -219,6 +219,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(withdrawals);
   });
   
+  app.get("/api/admin/deposits", isAdmin, async (req: Request, res: Response) => {
+    const deposits = await storage.getPendingDeposits();
+    res.json(deposits);
+  });
+  
   app.patch("/api/admin/transaction/:id", isAdmin, async (req: Request, res: Response) => {
     try {
       const transactionId = parseInt(req.params.id);
