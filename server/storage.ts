@@ -36,6 +36,7 @@ export interface IStorage {
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   getUserTransactions(userId: number, limit: number): Promise<Transaction[]>;
   getPendingWithdrawals(): Promise<Transaction[]>;
+  getPendingDeposits(): Promise<any[]>;
   updateTransactionStatus(id: number, status: string): Promise<Transaction>;
   
   // Game settings methods
@@ -277,7 +278,7 @@ export class DatabaseStorage implements IStorage {
     return pendingWithdrawals;
   }
   
-  async getPendingDeposits(): Promise<Transaction[]> {
+  async getPendingDeposits(): Promise<any[]> {
     // Find all pending deposit transactions and join with user data
     const result = await db
       .select({
@@ -286,6 +287,7 @@ export class DatabaseStorage implements IStorage {
         username: users.username,
         amount: transactions.amount,
         status: transactions.status,
+        type: transactions.type,
         paymentMethod: transactions.paymentMethod,
         transactionDetails: transactions.transactionDetails,
         createdAt: transactions.createdAt,

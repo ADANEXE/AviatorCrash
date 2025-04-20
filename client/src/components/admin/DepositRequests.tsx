@@ -149,7 +149,7 @@ export default function DepositRequests() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data && data.length > 0 ? (
+                {data && Array.isArray(data) && data.length > 0 ? (
                   data.map((deposit: DepositRequest) => (
                     <TableRow key={deposit.id} className="border-[#8A96A3]/20 hover:bg-[#0F1923]/50">
                       <TableCell className="font-medium">{deposit.id}</TableCell>
