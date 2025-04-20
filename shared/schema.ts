@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, doublePrecision, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // Users table
 export const users = pgTable("users", {
@@ -57,6 +58,34 @@ export const gameSettings = pgTable("game_settings", {
   maxMultiplier: doublePrecision("max_multiplier").notNull().default(100),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  bets: many(bets),
+  transactions: many(transactions),
+}));
+
+export const gameRoundsRelations = relations(gameRounds, ({ many }) => ({
+  bets: many(bets),
+}));
+
+export const betsRelations = relations(bets, ({ one }) => ({
+  user: one(users, {
+    fields: [bets.userId],
+    references: [users.id],
+  }),
+  gameRound: one(gameRounds, {
+    fields: [bets.gameRoundId],
+    references: [gameRounds.id],
+  }),
+}));
+
+export const transactionsRelations = relations(transactions, ({ one }) => ({
+  user: one(users, {
+    fields: [transactions.userId],
+    references: [users.id],
+  }),
+}));
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });

@@ -6,6 +6,8 @@ import {
   gameSettings, type GameSettings, type InsertGameSettings,
   type UserWithoutPassword, type LiveBet, type GameHistory
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and, asc, sql, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -41,71 +43,29 @@ export interface IStorage {
   updateGameSettings(settings: Partial<InsertGameSettings>): Promise<GameSettings>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private gameRounds: Map<number, GameRound>;
-  private bets: Map<number, Bet>;
-  private transactions: Map<number, Transaction>;
-  private gameSettings: GameSettings;
-  
-  private userIdCounter: number;
-  private gameRoundIdCounter: number;
-  private betIdCounter: number;
-  private transactionIdCounter: number;
-
-  constructor() {
-    this.users = new Map();
-    this.gameRounds = new Map();
-    this.bets = new Map();
-    this.transactions = new Map();
-    
-    this.userIdCounter = 1;
-    this.gameRoundIdCounter = 1;
-    this.betIdCounter = 1;
-    this.transactionIdCounter = 1;
-    
-    // Initialize default game settings
-    this.gameSettings = {
-      id: 1,
-      minBet: 10,
-      maxBet: 10000,
-      houseEdge: 5,
-      maxMultiplier: 100,
-      updatedAt: new Date()
-    };
-    
-    // Create default admin user
-    this.createUser({
-      username: 'admin',
-      password: '$2b$10$UJHG5HIeVJnkElB1t7PuE.NQdHJxTe6YTjX.XHHCIfkudVNb8DkB.', // 'admin123'
-      email: 'admin@example.com',
-      balance: 10000,
-      isAdmin: true
-    });
-  }
-
+export class DatabaseStorage implements IStorage {
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username.toLowerCase() === username.toLowerCase()
+    const [user] = await db.select().from(users).where(
+      sql`LOWER(${users.username}) = LOWER(${username})`
     );
+    return user;
   }
   
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email.toLowerCase() === email.toLowerCase()
+    const [user] = await db.select().from(users).where(
+      sql`LOWER(${users.email}) = LOWER(${email})`
     );
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userIdCounter++;
-    const createdAt = new Date();
-    const user: User = { ...insertUser, id, createdAt };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
   
@@ -115,202 +75,268 @@ export class MemStorage implements IStorage {
       throw new Error('User not found');
     }
     
-    user.balance += amount;
-    this.users.set(userId, user);
-    return user;
+    const newBalance = user.balance + amount;
+    const [updatedUser] = await db
+      .update(users)
+      .set({ balance: newBalance })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return updatedUser;
   }
   
   async getUsersCount(): Promise<number> {
-    return this.users.size;
+    const result = await db.select({ count: sql<number>`COUNT(*)` }).from(users);
+    return result[0].count;
   }
   
   async getUsers(limit: number, offset: number): Promise<UserWithoutPassword[]> {
-    const users = Array.from(this.users.values())
-      .sort((a, b) => a.id - b.id)
-      .slice(offset, offset + limit)
-      .map(({ password, ...userWithoutPassword }) => userWithoutPassword as UserWithoutPassword);
+    const selectedUsers = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        balance: users.balance,
+        isAdmin: users.isAdmin,
+        createdAt: users.createdAt
+      })
+      .from(users)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(users.id);
     
-    return users;
+    return selectedUsers;
   }
 
   // Game rounds methods
   async createGameRound(insertGameRound: InsertGameRound): Promise<GameRound> {
-    const id = this.gameRoundIdCounter++;
-    const startedAt = new Date();
-    const gameRound: GameRound = { 
-      ...insertGameRound, 
-      id, 
-      startedAt, 
-      endedAt: null, 
-      isComplete: false 
-    };
-    this.gameRounds.set(id, gameRound);
+    const [gameRound] = await db
+      .insert(gameRounds)
+      .values(insertGameRound)
+      .returning();
     return gameRound;
   }
   
   async getGameRound(id: number): Promise<GameRound | undefined> {
-    return this.gameRounds.get(id);
+    const [gameRound] = await db
+      .select()
+      .from(gameRounds)
+      .where(eq(gameRounds.id, id));
+    return gameRound;
   }
   
   async endGameRound(id: number, crashPoint: number): Promise<GameRound> {
-    const gameRound = await this.getGameRound(id);
-    if (!gameRound) {
+    const [updatedGameRound] = await db
+      .update(gameRounds)
+      .set({
+        crashPoint,
+        endedAt: new Date(),
+        isComplete: true
+      })
+      .where(eq(gameRounds.id, id))
+      .returning();
+    
+    if (!updatedGameRound) {
       throw new Error('Game round not found');
     }
     
-    const endedAt = new Date();
-    const updatedGameRound: GameRound = { 
-      ...gameRound, 
-      crashPoint, 
-      endedAt, 
-      isComplete: true 
-    };
-    
-    this.gameRounds.set(id, updatedGameRound);
     return updatedGameRound;
   }
   
   async getGameHistory(limit: number): Promise<GameHistory[]> {
-    return Array.from(this.gameRounds.values())
-      .filter(round => round.isComplete)
-      .sort((a, b) => {
-        if (!a.endedAt || !b.endedAt) return 0;
-        return b.endedAt.getTime() - a.endedAt.getTime();
+    const history = await db
+      .select({
+        id: gameRounds.id,
+        crashPoint: gameRounds.crashPoint
       })
-      .slice(0, limit)
-      .map(round => ({
-        id: round.id,
-        crashPoint: round.crashPoint
-      }));
+      .from(gameRounds)
+      .where(eq(gameRounds.isComplete, true))
+      .orderBy(desc(gameRounds.endedAt))
+      .limit(limit);
+    
+    return history;
   }
 
   // Bets methods
   async createBet(insertBet: InsertBet): Promise<Bet> {
-    const id = this.betIdCounter++;
-    const createdAt = new Date();
-    const bet: Bet = { ...insertBet, id, createdAt, profit: null };
-    this.bets.set(id, bet);
+    const [bet] = await db
+      .insert(bets)
+      .values(insertBet)
+      .returning();
     return bet;
   }
   
   async getBet(id: number): Promise<Bet | undefined> {
-    return this.bets.get(id);
+    const [bet] = await db
+      .select()
+      .from(bets)
+      .where(eq(bets.id, id));
+    return bet;
   }
   
   async getUserBets(userId: number, limit: number): Promise<Bet[]> {
-    return Array.from(this.bets.values())
-      .filter(bet => bet.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, limit);
+    const userBets = await db
+      .select()
+      .from(bets)
+      .where(eq(bets.userId, userId))
+      .orderBy(desc(bets.createdAt))
+      .limit(limit);
+    
+    return userBets;
   }
   
   async getLiveBets(gameRoundId: number): Promise<LiveBet[]> {
-    const liveBets: LiveBet[] = [];
+    // Join bets and users to get the data for live bets
+    const betResults = await db
+      .select({
+        id: bets.id,
+        username: users.username,
+        amount: bets.amount,
+        status: bets.status,
+        cashedOutAt: bets.cashedOutAt
+      })
+      .from(bets)
+      .innerJoin(users, eq(bets.userId, users.id))
+      .where(eq(bets.gameRoundId, gameRoundId));
     
-    for (const bet of this.bets.values()) {
-      if (bet.gameRoundId === gameRoundId) {
-        const user = await this.getUser(bet.userId);
-        if (user) {
-          const initials = user.username.substring(0, 2).toUpperCase();
-          
-          let status: 'active' | 'cashed_out' | 'lost';
-          if (bet.status === 'won') {
-            status = 'cashed_out';
-          } else if (bet.status === 'lost') {
-            status = 'lost';
-          } else {
-            status = 'active';
-          }
-          
-          liveBets.push({
-            id: bet.id,
-            username: user.username,
-            avatar: initials,
-            amount: bet.amount,
-            status,
-            cashedOutAt: bet.cashedOutAt || undefined
-          });
-        }
+    const liveBets: LiveBet[] = betResults.map(bet => {
+      const initials = bet.username.substring(0, 2).toUpperCase();
+      
+      let status: 'active' | 'cashed_out' | 'lost';
+      if (bet.status === 'won') {
+        status = 'cashed_out';
+      } else if (bet.status === 'lost') {
+        status = 'lost';
+      } else {
+        status = 'active';
       }
-    }
+      
+      return {
+        id: bet.id,
+        username: bet.username,
+        avatar: initials,
+        amount: bet.amount,
+        status,
+        cashedOutAt: bet.cashedOutAt || undefined
+      };
+    });
     
     return liveBets;
   }
   
   async updateBetStatus(id: number, status: string, cashedOutAt?: number, profit?: number): Promise<Bet> {
-    const bet = await this.getBet(id);
-    if (!bet) {
+    const updateValues: Partial<Bet> = { status };
+    if (cashedOutAt !== undefined) updateValues.cashedOutAt = cashedOutAt;
+    if (profit !== undefined) updateValues.profit = profit;
+    
+    const [updatedBet] = await db
+      .update(bets)
+      .set(updateValues)
+      .where(eq(bets.id, id))
+      .returning();
+    
+    if (!updatedBet) {
       throw new Error('Bet not found');
     }
     
-    const updatedBet: Bet = { 
-      ...bet, 
-      status,
-      cashedOutAt: cashedOutAt || bet.cashedOutAt,
-      profit: profit !== undefined ? profit : bet.profit
-    };
-    
-    this.bets.set(id, updatedBet);
     return updatedBet;
   }
 
   // Transactions methods
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
-    const id = this.transactionIdCounter++;
-    const createdAt = new Date();
-    const transaction: Transaction = { 
-      ...insertTransaction, 
-      id, 
-      createdAt, 
-      updatedAt: null 
-    };
-    this.transactions.set(id, transaction);
+    const [transaction] = await db
+      .insert(transactions)
+      .values(insertTransaction)
+      .returning();
     return transaction;
   }
   
   async getUserTransactions(userId: number, limit: number): Promise<Transaction[]> {
-    return Array.from(this.transactions.values())
-      .filter(transaction => transaction.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, limit);
+    const userTransactions = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.userId, userId))
+      .orderBy(desc(transactions.createdAt))
+      .limit(limit);
+    
+    return userTransactions;
   }
   
   async getPendingWithdrawals(): Promise<Transaction[]> {
-    return Array.from(this.transactions.values())
-      .filter(transaction => transaction.type === 'withdrawal' && transaction.status === 'pending')
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const pendingWithdrawals = await db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.type, 'withdrawal'),
+          eq(transactions.status, 'pending')
+        )
+      )
+      .orderBy(asc(transactions.createdAt));
+    
+    return pendingWithdrawals;
   }
   
   async updateTransactionStatus(id: number, status: string): Promise<Transaction> {
-    const transaction = this.transactions.get(id);
-    if (!transaction) {
+    const [updatedTransaction] = await db
+      .update(transactions)
+      .set({
+        status,
+        updatedAt: new Date()
+      })
+      .where(eq(transactions.id, id))
+      .returning();
+    
+    if (!updatedTransaction) {
       throw new Error('Transaction not found');
     }
     
-    const updatedAt = new Date();
-    const updatedTransaction: Transaction = { 
-      ...transaction, 
-      status, 
-      updatedAt
-    };
-    
-    this.transactions.set(id, updatedTransaction);
     return updatedTransaction;
   }
 
   // Game settings methods
   async getGameSettings(): Promise<GameSettings> {
-    return this.gameSettings;
+    const [settings] = await db
+      .select()
+      .from(gameSettings)
+      .orderBy(gameSettings.id)
+      .limit(1);
+    
+    if (!settings) {
+      // Create default settings if none exist
+      const defaultSettings = {
+        minBet: 10,
+        maxBet: 10000,
+        houseEdge: 5,
+        maxMultiplier: 100,
+      };
+      
+      const [newSettings] = await db
+        .insert(gameSettings)
+        .values(defaultSettings)
+        .returning();
+      
+      return newSettings;
+    }
+    
+    return settings;
   }
   
   async updateGameSettings(settings: Partial<InsertGameSettings>): Promise<GameSettings> {
-    this.gameSettings = { 
-      ...this.gameSettings, 
-      ...settings,
-      updatedAt: new Date()
-    };
-    return this.gameSettings;
+    const existingSettings = await this.getGameSettings();
+    
+    const [updatedSettings] = await db
+      .update(gameSettings)
+      .set({
+        ...settings,
+        updatedAt: new Date()
+      })
+      .where(eq(gameSettings.id, existingSettings.id))
+      .returning();
+    
+    return updatedSettings;
   }
 }
 
-export const storage = new MemStorage();
+// Initialize the database storage
+export const storage = new DatabaseStorage();
