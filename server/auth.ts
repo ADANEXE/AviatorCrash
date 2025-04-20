@@ -36,10 +36,11 @@ export async function registerUser(storage: IStorage, userData: z.infer<typeof r
   // Hash password
   const hashedPassword = await hash(userData.password, SALT_ROUNDS);
   
-  // Create new user
+  // Create new user with initial balance of 0
   const newUser = await storage.createUser({
     ...userWithoutConfirm,
     password: hashedPassword,
+    balance: 0, // Explicitly set balance to 0 for new users
     isAdmin: false
   });
   

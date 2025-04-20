@@ -46,12 +46,12 @@ async function initializeDatabase() {
     const adminUser = await storage.getUserByUsername('admin');
     
     if (!adminUser) {
-      // Create default admin user
+      // Create default admin user with a balance of 0 (like regular users)
       await storage.createUser({
         username: 'admin',
         password: '$2b$10$UJHG5HIeVJnkElB1t7PuE.NQdHJxTe6YTjX.XHHCIfkudVNb8DkB.', // 'admin123'
         email: 'admin@example.com',
-        balance: 10000,
+        balance: 0, // Set admin initial balance to 0
         isAdmin: true
       });
       console.log('Default admin user created');
