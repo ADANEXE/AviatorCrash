@@ -60,6 +60,8 @@ export default function DepositRequests() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/deposits'] });
+      // Invalidate user session to refresh balance
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       toast({
         title: "Deposit Approved",
         description: "The deposit has been approved and funds added to user's account.",

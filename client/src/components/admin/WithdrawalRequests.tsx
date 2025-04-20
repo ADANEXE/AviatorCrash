@@ -58,6 +58,8 @@ export default function WithdrawalRequests() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/withdrawals'] });
+      // Invalidate user session to refresh balance
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       toast({
         title: "Withdrawal Approved",
         description: "The withdrawal request has been approved.",
