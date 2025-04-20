@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
 type Transaction = {
   id: number;
@@ -50,7 +50,7 @@ type Bet = {
 };
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshBalance, isRefreshingBalance } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
   
   // Redirect if not logged in
@@ -188,7 +188,17 @@ export default function ProfilePage() {
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="bg-[#1A2634] border-0">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Account Balance</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg">Account Balance</CardTitle>
+              <button 
+                onClick={refreshBalance}
+                disabled={isRefreshingBalance}
+                className="p-1.5 rounded-full hover:bg-[#0F1923] transition-colors"
+                title="Refresh Balance"
+              >
+                <RefreshCw className={`h-5 w-5 text-[#8A96A3] ${isRefreshingBalance ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
             <CardDescription className="text-[#8A96A3]">
               Your current balance
             </CardDescription>
