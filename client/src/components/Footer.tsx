@@ -38,22 +38,22 @@ export default function Footer() {
             </p>
           </div>
           <div className="flex space-x-6 flex-wrap justify-center">
-            <Link href="#">
+            <Link href="https://aviatocrash.blogspot.com/p/terms-of-services.html">
               <a className="text-[#8A96A3] hover:text-white transition duration-200">
                 Terms of Service
               </a>
             </Link>
-            <Link href="https://aviatocrash.blogspot.com/p/terms-of-services.html">
+            <Link href="https://aviatocrash.blogspot.com/p/privacy-policy.html">
               <a className="text-[#8A96A3] hover:text-white transition duration-200">
                 Privacy Policy
               </a>
             </Link>
-            <Link href="https://aviatocrash.blogspot.com/p/privacy-policy.html">
+            <Link href="https://aviatocrash.blogspot.com/p/responsible-gaming-policy.html">
               <a className="text-[#8A96A3] hover:text-white transition duration-200">
                 Responsible Gaming
               </a>
             </Link>
-            <Link href="https://aviatocrash.blogspot.com/p/responsible-gaming-policy.html">
+            <Link href="#">
               <a className="text-[#8A96A3] hover:text-white transition duration-200">
                 Contact Us
               </a>
