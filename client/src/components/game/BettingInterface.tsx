@@ -67,7 +67,14 @@ export default function BettingInterface() {
   return (
     <Card className="bg-[#1A2634] shadow-lg border-0">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-semibold">Place Your Bet</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg font-semibold">Place Your Bet</CardTitle>
+          {gameState.status === 'waiting' && gameState.countdown !== undefined && (
+            <div className="text-[#8A96A3] font-mono">
+              Next round in: {gameState.countdown}s
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

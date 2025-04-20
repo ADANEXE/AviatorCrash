@@ -49,19 +49,36 @@ export class GameManager {
       this.gameTimer = null;
     }
     
-    // Set game state to waiting
+    // Set game state to waiting with countdown
+    const startTime = Date.now();
+    const waitDuration = 15000; // 15 seconds in milliseconds
+    
     this.currentState = {
       status: 'waiting',
-      currentMultiplier: 1.0
+      currentMultiplier: 1.0,
+      startTime,
+      waitDuration
     };
     
     // Broadcast the game state
     this.broadcastGameState();
     
-    // Wait 5 seconds before starting the game
+    // Update countdown every second
+    let countdown = 15;
+    const countdownInterval = setInterval(() => {
+      countdown--;
+      this.currentState = {
+        ...this.currentState,
+        countdown
+      };
+      this.broadcastGameState();
+    }, 1000);
+    
+    // Wait 15 seconds before starting the game
     this.gameTimer = setTimeout(() => {
+      clearInterval(countdownInterval);
       this.startGame();
-    }, 5000);
+    }, waitDuration);
   }
   
   private async startGame() {

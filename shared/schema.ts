@@ -117,6 +117,8 @@ export type GameState = {
   crashPoint?: number;
   startTime?: number;
   roundId?: number;
+  waitDuration?: number;
+  countdown?: number;
 };
 
 export type UserWithoutPassword = Omit<User, 'password'>;
