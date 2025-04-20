@@ -31,6 +31,8 @@ type AuthContextType = {
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   updateUserData: (data: Partial<User>) => void;
+  refreshBalance: () => Promise<void>;
+  isRefreshingBalance: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,6 +40,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshingBalance, setIsRefreshingBalance] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -144,6 +147,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser({ ...user, ...data });
     }
   };
+  
+  const refreshBalance = async () => {
+    if (!user) return;
+    
+    setIsRefreshingBalance(true);
+    try {
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        toast({
+          title: "Balance Updated",
+          description: "Your balance has been refreshed.",
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing balance:', error);
+      toast({
+        variant: "destructive",
+        title: "Refresh Failed",
+        description: "Failed to refresh your balance. Please try again.",
+      });
+    } finally {
+      setIsRefreshingBalance(false);
+    }
+  };
 
   return (
     <AuthContext.Provider
@@ -155,6 +187,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         register,
         logout,
         updateUserData,
+        refreshBalance,
+        isRefreshingBalance,
       }}
     >
       {children}

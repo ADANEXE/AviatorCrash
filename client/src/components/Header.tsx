@@ -7,9 +7,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 
 export default function Header() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshBalance, isRefreshingBalance } = useAuth();
 
   return (
     <header className="bg-[#1A2634] shadow-lg">
@@ -52,6 +53,14 @@ export default function Header() {
                 <span className="ml-2 text-[#FF6B00] font-mono font-medium">
                   ₹ {user.balance.toFixed(2)}
                 </span>
+                <button 
+                  onClick={refreshBalance}
+                  disabled={isRefreshingBalance}
+                  className="ml-2 p-1 rounded-full hover:bg-[#1A2634] transition-colors"
+                  title="Refresh Balance"
+                >
+                  <RefreshCw className={`h-4 w-4 text-[#8A96A3] ${isRefreshingBalance ? 'animate-spin' : ''}`} />
+                </button>
               </div>
               <Button
                 asChild
