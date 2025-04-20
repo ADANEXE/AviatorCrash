@@ -237,7 +237,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If this is a deposit and it's approved, add the amount to the user's balance
       if (transaction.type === 'deposit' && status === 'completed') {
-        await storage.updateUserBalance(transaction.userId, transaction.amount);
+        // Log the transaction for debugging
+        console.log('Approving deposit:', transaction);
+        
+        // Make sure we handle the amount correctly - deposit amounts are stored as positive values
+        await storage.updateUserBalance(transaction.userId, Math.abs(transaction.amount));
       }
       
       // If this is a withdrawal and it's rejected, return the amount to the user's balance
