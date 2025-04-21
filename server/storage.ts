@@ -1,13 +1,24 @@
-import { 
-  users, type User, type InsertUser,
-  gameRounds, type GameRound, type InsertGameRound,
-  bets, type Bet, type InsertBet,
-  transactions, type Transaction, type InsertTransaction,
-  gameSettings, type GameSettings, type InsertGameSettings,
-  type UserWithoutPassword, type LiveBet, type GameHistory
+import {
+  users,
+  type User,
+  type InsertUser,
+  gameRounds,
+  type GameRound,
+  type InsertGameRound,
+  bets,
+  type Bet,
+  type InsertBet,
+  transactions,
+  type Transaction,
+  type InsertTransaction,
+  type UserWithoutPassword,
+  type LiveBet,
+  type GameHistory,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, asc, sql, isNull, gte } from "drizzle-orm";
+import { pgTable, serial, integer, timestamp,primaryKey } from 'drizzle-orm/pg-core'
+
 
 export interface IStorage {
   // User methods
@@ -50,6 +61,15 @@ export interface IStorage {
   getTotalWithdrawals: () => Promise<number>;
   getDailyActiveUsers: () => Promise<{ hour: string; users: number }[]>;
 }
+
+export const gameSettings = pgTable("game_settings", {
+  id: serial("id").primaryKey(),
+  minBet: integer("min_bet").notNull().default(10),
+  maxBet: integer("max_bet").notNull().default(10000),
+  houseEdge: integer("house_edge").notNull().default(5),
+  maxMultiplier: integer("max_multiplier").notNull().default(100),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
 
 export class DatabaseStorage implements IStorage {
   // User methods
@@ -332,36 +352,12 @@ export class DatabaseStorage implements IStorage {
 
   // Game settings methods
   async getGameSettings(): Promise<GameSettings> {
-    const [settings] = await db
-      .select()
-      .from(gameSettings)
-      .orderBy(gameSettings.id)
-      .limit(1);
-
-    if (!settings) {
-      // Create default settings if none exist
-      const defaultSettings = {
-        minBet: 10,
-        maxBet: 10000,
-        houseEdge: 5,
-        maxMultiplier: 100,
-        maintenance: false, // Added default value for maintenance
-      };
-
-      const [newSettings] = await db
-        .insert(gameSettings)
-        .values(defaultSettings)
-        .returning();
-
-      return newSettings;
-    }
-
-    return settings;
+    const [settings] = await db.select().from(gameSettings).orderBy(gameSettings.id).limit(1);
+    return settings || {id: 0, minBet: 10, maxBet: 10000, houseEdge: 5, maxMultiplier: 100, updatedAt: new Date()};
   }
 
   async updateGameSettings(settings: Partial<InsertGameSettings>): Promise<GameSettings> {
     const existingSettings = await this.getGameSettings();
-
     const [updatedSettings] = await db
       .update(gameSettings)
       .set({
@@ -433,6 +429,5 @@ export type GameSettings = {
   maxBet: number;
   houseEdge: number;
   maxMultiplier: number;
-  maintenance: boolean;
   updatedAt: Date;
 };

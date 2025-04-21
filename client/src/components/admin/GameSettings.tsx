@@ -46,7 +46,6 @@ const gameSettingsSchema = z.object({
   maxMultiplier: z.number()
     .min(2, { message: "Maximum multiplier must be at least 2" })
     .max(1000, { message: "Maximum multiplier cannot exceed 1000" }),
-  maintenance: z.boolean().optional(), // Added maintenance field to schema
 });
 
 type GameSettingsFormValues = z.infer<typeof gameSettingsSchema>;
@@ -141,7 +140,6 @@ export default function GameSettings() {
       maxBet: gameSettings?.maxBet || 10000,
       houseEdge: gameSettings?.houseEdge || 5,
       maxMultiplier: gameSettings?.maxMultiplier || 100,
-      maintenance: gameSettings?.maintenance || false, //Added default maintenance value
     },
     values: gameSettings,
   });
@@ -302,8 +300,8 @@ export default function GameSettings() {
               </div>
 
               <div className="flex justify-end">
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="bg-[#FF6B00] hover:bg-orange-500"
                   disabled={isUpdatingSettings}
                 >
@@ -319,34 +317,6 @@ export default function GameSettings() {
               </div>
             </form>
           </Form>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-[#1A2634] border-0">
-        <CardHeader>
-          <CardTitle>Maintenance Mode</CardTitle>
-          <CardDescription>Enable or disable site maintenance mode</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-4">
-            <FormField
-              control={form.control}
-              name="maintenance"
-              render={({ field }) => (
-                <FormItem>
-                  <Switch
-                    {...field}
-                    id="maintenance"
-                  />
-                  <Label htmlFor="maintenance">
-                    {field.value ? "Site is under maintenance" : "Site is live"}
-                  </Label>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-          </div>
         </CardContent>
       </Card>
 
