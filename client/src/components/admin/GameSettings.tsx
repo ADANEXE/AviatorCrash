@@ -25,8 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label"; // Added Label import
+import { Switch, Label } from "@/components/ui/switch"; // Added Label import
 import { Loader2, AlertCircle } from "lucide-react";
 import {
   Alert,
