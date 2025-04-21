@@ -59,9 +59,21 @@ export default function DepositRequests() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/deposits'] });
-      // Invalidate user session to refresh balance
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      // Invalidate multiple queries simultaneously
+      queryClient.invalidateQueries({ 
+        queryKey: [
+          '/api/admin/deposits',
+          '/api/auth/me',
+          '/api/user/transactions'
+        ]
+      });
+      
+      // Force an immediate refetch
+      queryClient.refetchQueries({ 
+        queryKey: ['/api/auth/me'],
+        type: 'active'
+      });
+      
       toast({
         title: "Deposit Approved",
         description: "The deposit has been approved and funds added to user's account.",
