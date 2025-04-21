@@ -25,7 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
+import { Switch, Label } from "@/components/ui/switch"; // Added Label import
 import { Loader2, AlertCircle } from "lucide-react";
 import {
   Alert,
@@ -46,6 +46,7 @@ const gameSettingsSchema = z.object({
   maxMultiplier: z.number()
     .min(2, { message: "Maximum multiplier must be at least 2" })
     .max(1000, { message: "Maximum multiplier cannot exceed 1000" }),
+  maintenance: z.boolean().optional(), // Added maintenance field to schema
 });
 
 type GameSettingsFormValues = z.infer<typeof gameSettingsSchema>;
@@ -140,6 +141,7 @@ export default function GameSettings() {
       maxBet: gameSettings?.maxBet || 10000,
       houseEdge: gameSettings?.houseEdge || 5,
       maxMultiplier: gameSettings?.maxMultiplier || 100,
+      maintenance: gameSettings?.maintenance || false, //Added default maintenance value
     },
     values: gameSettings,
   });
@@ -198,7 +200,7 @@ export default function GameSettings() {
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold tracking-tight">Game Settings</h2>
-      
+
       <Card className="bg-[#1A2634] border-0">
         <CardHeader>
           <CardTitle>General Settings</CardTitle>
@@ -231,7 +233,7 @@ export default function GameSettings() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="maxBet"
@@ -253,7 +255,7 @@ export default function GameSettings() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="houseEdge"
@@ -275,7 +277,7 @@ export default function GameSettings() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="maxMultiplier"
@@ -298,7 +300,7 @@ export default function GameSettings() {
                   )}
                 />
               </div>
-              
+
               <div className="flex justify-end">
                 <Button 
                   type="submit" 
@@ -319,7 +321,35 @@ export default function GameSettings() {
           </Form>
         </CardContent>
       </Card>
-      
+
+      <Card className="bg-[#1A2634] border-0">
+        <CardHeader>
+          <CardTitle>Maintenance Mode</CardTitle>
+          <CardDescription>Enable or disable site maintenance mode</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-4">
+            <FormField
+              control={form.control}
+              name="maintenance"
+              render={({ field }) => (
+                <FormItem>
+                  <Switch
+                    {...field}
+                    id="maintenance"
+                  />
+                  <Label htmlFor="maintenance">
+                    {field.value ? "Site is under maintenance" : "Site is live"}
+                  </Label>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="bg-[#1A2634] border-0">
         <CardHeader>
           <CardTitle>Manual Control</CardTitle>
@@ -341,9 +371,9 @@ export default function GameSettings() {
               disabled={isTogglingManualMode}
             />
           </div>
-          
+
           <Separator className="bg-[#8A96A3]/10" />
-          
+
           <div className="space-y-4">
             <div className="space-y-1">
               <h4 className="text-sm font-medium text-white">Next Crash Point</h4>
@@ -351,7 +381,7 @@ export default function GameSettings() {
                 Set the exact crash point for the next game (only works when manual mode is enabled).
               </p>
             </div>
-            
+
             <div className="flex space-x-2">
               <div className="flex-1">
                 <Input

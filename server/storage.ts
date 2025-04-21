@@ -345,6 +345,7 @@ export class DatabaseStorage implements IStorage {
         maxBet: 10000,
         houseEdge: 5,
         maxMultiplier: 100,
+        maintenance: false, // Added default value for maintenance
       };
 
       const [newSettings] = await db
@@ -426,3 +427,12 @@ export class DatabaseStorage implements IStorage {
 
 // Initialize the database storage
 export const storage = new DatabaseStorage();
+export type GameSettings = {
+  id: number;
+  minBet: number;
+  maxBet: number;
+  houseEdge: number;
+  maxMultiplier: number;
+  maintenance: boolean;
+  updatedAt: Date;
+};
