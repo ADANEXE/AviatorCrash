@@ -365,5 +365,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  app.patch("/api/admin/users/:id/suspend", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      await storage.updateUser(userId, { suspended: true });
+      res.json({ message: "User suspended successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to suspend user" });
+    }
+  });
+
+  app.patch("/api/admin/users/:id/balance", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { amount } = req.body;
+      await storage.updateUserBalance(userId, amount);
+      res.json({ message: "User balance updated successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user balance" });
+    }
+  });
+
   return httpServer;
 }

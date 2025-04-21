@@ -85,12 +85,41 @@ export default function UserManagement() {
         title: "Balance Updated",
         description: "User balance has been updated successfully.",
       });
+      // Close the dialog after successful update
+      const dialog = document.querySelector('[role="dialog"]');
+      if (dialog) {
+        const closeButton = dialog.querySelector('button[aria-label="Close"]');
+        if (closeButton) {
+          (closeButton as HTMLButtonElement).click();
+        }
+      }
     },
     onError: (error) => {
       toast({
         variant: "destructive",
         title: "Error",
         description: error.message || "Failed to update user balance.",
+      });
+    },
+  });
+
+  const { mutate: suspendUser, isPending: isSuspendingUser } = useMutation({
+    mutationFn: async (userId: number) => {
+      const response = await apiRequest('PATCH', `/api/admin/users/${userId}/suspend`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({
+        title: "User Suspended",
+        description: "User has been suspended successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to suspend user.",
       });
     },
   });
@@ -261,8 +290,20 @@ export default function UserManagement() {
                             </DialogContent>
                           </Dialog>
                           
-                          <DropdownMenuItem className="cursor-pointer text-red-500">
-                            <BadgeAlert className="mr-2 h-4 w-4" />
+                          <DropdownMenuItem 
+                            className="cursor-pointer text-red-500"
+                            onClick={() => {
+                              if (confirm('Are you sure you want to suspend this user?')) {
+                                suspendUser(user.id);
+                              }
+                            }}
+                            disabled={isSuspendingUser}
+                          >
+                            {isSuspendingUser ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <BadgeAlert className="mr-2 h-4 w-4" />
+                            )}
                             Suspend User
                           </DropdownMenuItem>
                         </DropdownMenuContent>
