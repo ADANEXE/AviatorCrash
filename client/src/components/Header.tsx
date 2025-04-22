@@ -10,14 +10,7 @@ import { useEffect } from "react";
 import { Button } from "./ui/button";
 
 export default function Header() {
-  const { user, logout, refreshBalance } = useAuth();
-
-  // Refresh balance when component mounts (handles login)
-  useEffect(() => {
-    if (user) {
-      refreshBalance();
-    }
-  }, [user]);
+  const { user, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -39,12 +32,6 @@ export default function Header() {
         <div className="flex items-center gap-4">
           {user ? (
             <>
-              <div className="hidden md:flex items-center bg-background/80 rounded-full px-4 py-1.5">
-                <span className="text-sm font-medium">Balance:</span>
-                <span className="ml-2 text-primary font-mono font-medium">
-                  ₹ {user.balance.toFixed(2)}
-                </span>
-              </div>
               <Button variant="ghost" asChild>
                 <Link href="/profile">Profile</Link>
               </Button>
