@@ -85,7 +85,7 @@ export class GameManager {
     // Generate crash point
     const crashPoint = this.manualMode && this.manualCrashPoint !== null 
       ? this.manualCrashPoint 
-      : this.generateCrashPoint();
+      : await this.generateCrashPoint();
     
     // Create new game round
     const gameRound = await this.storage.createGameRound({ 
@@ -179,16 +179,20 @@ export class GameManager {
     }
   }
   
-  private generateCrashPoint(): number {
-    // House edge (default 5%)
-    const houseEdge = 0.05;
+  private async generateCrashPoint(): Promise<number> {
+    // Get game settings
+    const settings = await this.storage.getGameSettings();
+    const houseEdge = settings.houseEdge / 100; // Convert percentage to decimal
     
     // Generate random number between 0 and 1
     const randomValue = Math.random();
     
     // Calculate crash point using house edge
     // Using a formula that creates an exponential distribution
-    const crashPoint = 0.99 / (randomValue ** (1 / (1 - houseEdge)));
+    let crashPoint = 0.99 / (randomValue ** (1 / (1 - houseEdge)));
+    
+    // Ensure crash point doesn't exceed max multiplier
+    crashPoint = Math.min(crashPoint, settings.maxMultiplier);
     
     // Round to 2 decimal places
     return Math.round(crashPoint * 100) / 100;
