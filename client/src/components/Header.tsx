@@ -40,9 +40,11 @@ export default function Header() {
               strokeLinejoin="round"
             />
           </svg>
-          <Link href="/">
-            <a className="text-xl font-bold text-white">Aviator</a>
-          </Link>
+          <div>
+            <Link href="/">
+              <a className="text-xl font-bold text-white">Aviator</a>
+            </Link>
+          </div>
         </div>
 
         <div className="flex items-center space-x-4">
@@ -67,7 +69,9 @@ export default function Header() {
                 className="bg-[#4D7CFE] hover:bg-blue-600 text-white rounded-full"
                 size="sm"
               >
-                <Link href="/deposit">Deposit</Link>
+                <div>
+                  <Link href="/deposit">Deposit</Link>
+                </div>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center space-x-1 bg-[#1A2634] border border-[#8A96A3]/20 rounded-full p-1 pr-2">
@@ -82,21 +86,27 @@ export default function Header() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-[#1A2634] text-white border-[#8A96A3]/20">
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">
-                      <a className="cursor-pointer">Profile</a>
-                    </Link>
+                    <div>
+                      <Link href="/profile">
+                        <a className="cursor-pointer">Profile</a>
+                      </Link>
+                    </div>
                   </DropdownMenuItem>
                   {user.isAdmin && (
                     <DropdownMenuItem asChild>
-                      <Link href="/admin">
-                        <a className="cursor-pointer">Admin Panel</a>
-                      </Link>
+                      <div>
+                        <Link href="/admin">
+                          <a className="cursor-pointer">Admin Panel</a>
+                        </Link>
+                      </div>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem asChild>
-                    <Link href="/withdraw">
-                      <a className="cursor-pointer">Withdraw</a>
-                    </Link>
+                    <div>
+                      <Link href="/withdraw">
+                        <a className="cursor-pointer">Withdraw</a>
+                      </Link>
+                    </div>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-[#FF3D57]"
@@ -115,14 +125,18 @@ export default function Header() {
                 className="border-[#8A96A3]/20 text-white hover:bg-[#1A2634]/80"
                 size="sm"
               >
-                <Link href="/login">Login</Link>
+                <div>
+                  <Link href="/login">Login</Link>
+                </div>
               </Button>
               <Button
                 asChild
                 className="bg-[#FF6B00] hover:bg-orange-500 text-white"
                 size="sm"
               >
-                <Link href="/register">Register</Link>
+                <div>
+                  <Link href="/register">Register</Link>
+                </div>
               </Button>
             </>
           )}
