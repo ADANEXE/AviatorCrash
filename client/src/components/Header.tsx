@@ -14,9 +14,9 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex items-center h-14">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="font-bold text-xl">AI Agent</Link>
+      <div className="container flex items-center justify-between h-14">
+        <div className="flex items-center gap-6 mr-6">
+          <Link href="/" className="font-bold text-xl">Aviator</Link>
           <nav className="hidden md:flex items-center gap-6">
             <Button variant="ghost" asChild>
               <Link href="/">Play</Link>
